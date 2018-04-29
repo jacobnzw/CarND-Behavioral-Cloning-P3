@@ -41,9 +41,9 @@ import numpy as np
 import sklearn
 from sklearn.model_selection import train_test_split
 
-BASE_PATH = './data/'
+BASE_PATH = os.path.join('.', 'data')
 samples = []
-with open(BASE_PATH + 'driving_log.csv') as csvfile:
+with open(os.path.join(BASE_PATH, 'driving_log.csv')) as csvfile:
     reader = csv.reader(csvfile)
     for line in reader:
         samples.append(line)
@@ -54,6 +54,7 @@ train_samples, validation_samples = train_test_split(samples, test_size=0.2)
 def generator(samples, batch_size=32):
     num_samples = len(samples)
     DELTA = 0.15
+    FLAG = True
     while 1:  # Loop forever so the generator never terminates
         sklearn.utils.shuffle(samples)
         for offset in range(0, num_samples, batch_size):
@@ -63,8 +64,14 @@ def generator(samples, batch_size=32):
             angles = []
             # for all CSV lines in the batch
             for batch_sample in batch_samples:
+                SEP = '/' if '/' in batch_sample[0] else '\\'
                 # read the center image and steering angle
-                name = BASE_PATH + 'IMG/' + batch_sample[0].split('/')[-1]
+                name = os.path.join(BASE_PATH, 'IMG', batch_sample[0].split(SEP)[-1])
+
+                if FLAG:
+                    print(name)
+                    FLAG = False
+
                 center_image = cv2.imread(name)
                 center_angle = float(batch_sample[3])
                 images.append(center_image)
@@ -94,15 +101,11 @@ def generator(samples, batch_size=32):
             yield sklearn.utils.shuffle(X_train, y_train)
 
 
-ch, row, col = 3, 80, 320  # Trimmed image format
-
-
 from keras.models import Sequential
 from keras.layers import Flatten, Dense, Convolution2D, MaxPooling2D, Activation
-from keras.layers import Cropping2D, Lambda, Dropout, BatchNormalization
+from keras.layers import Cropping2D, Lambda, Dropout, BatchNormalization, AveragePooling2D
 from keras.optimizers import Adam
 
-# TODO: Data augmentation: cv2.flip(im, 1), measurements
 # TODO: Use additional image adata from left/right cameras
 # TODO: Transfer learning?
 
@@ -133,28 +136,30 @@ def mynet():
     model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160, 320, 3)))
     model.add(Cropping2D(cropping=((70, 25), (0, 0))))  # image size after cropping: (65, 320, 3)
 
-    model.add(Convolution2D(32, 5, 5, **conv_opt))
+    model.add(Convolution2D(8, 5, 5, **conv_opt))
     # model.add(BatchNormalization())
     model.add(Activation('relu'))
 
-    model.add(Convolution2D(32, 5, 5, **conv_opt))
+    model.add(Convolution2D(16, 5, 5, **conv_opt))
     # model.add(BatchNormalization())
     model.add(Activation('relu'))
-    model.add(MaxPooling2D(**pool_opt))
-
-    model.add(Convolution2D(32, 3, 3, **conv_opt))
-    # model.add(BatchNormalization())
-    model.add(Activation('relu'))
+    model.add(AveragePooling2D(**pool_opt))
 
     model.add(Convolution2D(32, 3, 3, **conv_opt))
     # model.add(BatchNormalization())
     model.add(Activation('relu'))
-    model.add(MaxPooling2D(**pool_opt))
+
+    model.add(Convolution2D(32, 3, 3, **conv_opt))
+    # model.add(BatchNormalization())
+    model.add(Activation('relu'))
+    model.add(AveragePooling2D(**pool_opt))
 
     model.add(Flatten())
-    model.add(Dense(200, activation='relu'))
+    model.add(Dense(100, activation='relu'))
     model.add(Dropout(DROPOUT_PROB))
     model.add(Dense(50, activation='relu'))
+    model.add(Dropout(DROPOUT_PROB))
+    model.add(Dense(10, activation='relu'))
     model.add(Dropout(DROPOUT_PROB))
     model.add(Dense(1, activation='tanh'))
 
@@ -166,10 +171,9 @@ model = mynet()
 model.compile(loss='mse', optimizer=optim)
 
 print('Training...')
-# model.fit(X_train, y_train, validation_split=0.2, shuffle=True, nb_epoch=5, batch_size=128)
 train_generator = generator(train_samples, batch_size=64)
 validation_generator = generator(validation_samples, batch_size=64)
-model.fit_generator(train_generator, nb_epoch=3, samples_per_epoch=2*len(train_samples),
+model.fit_generator(train_generator, nb_epoch=5, samples_per_epoch=2*len(train_samples),
                     validation_data=validation_generator, nb_val_samples=2*len(validation_samples))
 model.save('model.h5')
 print('Model saved.')
