@@ -54,7 +54,6 @@ train_samples, validation_samples = train_test_split(samples, test_size=0.2)
 def generator(samples, batch_size=32):
     num_samples = len(samples)
     DELTA = 0.15
-    FLAG = True
     while 1:  # Loop forever so the generator never terminates
         sklearn.utils.shuffle(samples)
         for offset in range(0, num_samples, batch_size):
@@ -67,11 +66,6 @@ def generator(samples, batch_size=32):
                 SEP = '/' if '/' in batch_sample[0] else '\\'
                 # read the center image and steering angle
                 name = os.path.join(BASE_PATH, 'IMG', batch_sample[0].split(SEP)[-1])
-
-                if FLAG:
-                    print(name)
-                    FLAG = False
-
                 center_image = cv2.imread(name)
                 center_angle = float(batch_sample[3])
                 images.append(center_image)
@@ -123,12 +117,12 @@ def nvidia_net():
     model.add(Dense(100, activation='relu'))
     model.add(Dense(50, activation='relu'))
     model.add(Dense(10, activation='relu'))
+    model.add(Dense(1, activation='tanh'))
 
     return model
 
 
 def mynet():
-    # TODO: separate out activation on conv layers, insert BatchNorm before activation layers.
     conv_opt = {'border_mode': 'same'}
     pool_opt = {'border_mode': 'same', 'pool_size': (2, 2)}
     DROPOUT_PROB = 0.1
@@ -139,25 +133,31 @@ def mynet():
     model.add(Convolution2D(8, 5, 5, **conv_opt))
     # model.add(BatchNormalization())
     model.add(Activation('relu'))
+    model.add(AveragePooling2D(**pool_opt))
 
     model.add(Convolution2D(16, 5, 5, **conv_opt))
     # model.add(BatchNormalization())
     model.add(Activation('relu'))
     model.add(AveragePooling2D(**pool_opt))
 
-    model.add(Convolution2D(32, 3, 3, **conv_opt))
-    # model.add(BatchNormalization())
-    model.add(Activation('relu'))
-
-    model.add(Convolution2D(32, 3, 3, **conv_opt))
+    model.add(Convolution2D(24, 5, 5, **conv_opt))
     # model.add(BatchNormalization())
     model.add(Activation('relu'))
     model.add(AveragePooling2D(**pool_opt))
 
+    model.add(Convolution2D(32, 3, 3, **conv_opt))
+    # model.add(BatchNormalization())
+    model.add(Activation('relu'))
+    # model.add(AveragePooling2D(**pool_opt))
+
+    model.add(Convolution2D(48, 3, 3, **conv_opt))
+    # model.add(BatchNormalization())
+    model.add(Activation('relu'))
+
     model.add(Flatten())
-    model.add(Dense(100, activation='relu'))
+    model.add(Dense(200, activation='relu'))
     model.add(Dropout(DROPOUT_PROB))
-    model.add(Dense(50, activation='relu'))
+    model.add(Dense(100, activation='relu'))
     model.add(Dropout(DROPOUT_PROB))
     model.add(Dense(10, activation='relu'))
     model.add(Dropout(DROPOUT_PROB))
