@@ -42,8 +42,11 @@ import sklearn
 from sklearn.model_selection import train_test_split
 
 BASE_PATH = os.path.join('.', 'data')
+IMG_BASE_PATH = os.path.join(BASE_PATH, 'IMG')
+DRIVE_LOG_PATH = os.path.join(BASE_PATH, 'driving_log.csv')
+
 samples = []
-with open(os.path.join(BASE_PATH, 'driving_log.csv')) as csvfile:
+with open(os.path.join(DRIVE_LOG_PATH)) as csvfile:
     reader = csv.reader(csvfile)
     for line in reader:
         samples.append(line)
@@ -63,14 +66,17 @@ def generator(samples, batch_size=32):
             angles = []
             # for all CSV lines in the batch
             for batch_sample in batch_samples:
+            	# choose right directory separator
                 SEP = '/' if '/' in batch_sample[0] else '\\'
-                # read the center image and steering angle
-                name = os.path.join(BASE_PATH, 'IMG', batch_sample[0].split(SEP)[-1])
-                center_image = cv2.imread(name)
+
+                # read the center image in RGB format
+                name = os.path.join(IMG_BASE_PATH, batch_sample[0].split(SEP)[-1])
+                center_image = cv2.cvtColor(cv2.imread(name), cv2.COLOR_BGR2RGB)
+                # read the steering angle
                 center_angle = float(batch_sample[3])
+                
                 images.append(center_image)
                 angles.append(center_angle)
-
                 # data augmentation: flip image and reverse steering angle
                 images.append(cv2.flip(center_image, 1))
                 angles.append(-center_angle)
