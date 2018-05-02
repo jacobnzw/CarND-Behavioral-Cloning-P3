@@ -1,39 +1,3 @@
-# import csv
-# import cv2
-# import numpy as np
-#
-# # read all the lines of the csv
-# print('Reading CSV...')
-# lines = []
-# with open('./data/joined/driving_log.csv') as csvfile:
-#     reader = csv.reader(csvfile)
-#     for line in reader:
-#         lines.append(line)
-#
-# print('Creating NumPy arrays...')
-# images = []
-# steering_angles = []
-# for line in lines:
-#     # get the image path
-#     source_path = line[0]
-#     filename = source_path.split('\\')[-1]
-#     current_path = './data/joined/IMG/' + filename
-#
-#     # load the image using OpenCV
-#     image = cv2.imread(current_path)
-#     images.append(image)
-#     # steering angle stored in the 4th column of the driving_log.csv
-#     steering_angles.append(float(line[3]))
-#
-#     # augment training set with horizontally mirrored images
-#     images.append(cv2.flip(image, 1))
-#     # reverse steering angle for mirrored images
-#     steering_angles.append(-float(line[3]))
-#
-# # images are inputs and steering angles are outputs
-# X_train = np.array(images)
-# y_train = np.array(steering_angles)
-
 import os
 import csv
 import cv2
@@ -56,7 +20,6 @@ train_samples, validation_samples = train_test_split(samples, test_size=0.2)
 
 def generator(samples, batch_size=32):
     num_samples = len(samples)
-    DELTA = 0.15
     while 1:  # Loop forever so the generator never terminates
         sklearn.utils.shuffle(samples)
         for offset in range(0, num_samples, batch_size):
@@ -81,20 +44,6 @@ def generator(samples, batch_size=32):
                 images.append(cv2.flip(center_image, 1))
                 angles.append(-center_angle)
 
-                # # read the left image and steering angle
-                # name = BASE_PATH + 'IMG/' + batch_sample[1].split('\\')[-1]
-                # left_image = cv2.imread(name)
-                # left_angle = center_angle + DELTA
-                # images.append(left_image)
-                # angles.append(left_angle)
-                #
-                # # read the right image and steering angle
-                # name = BASE_PATH + 'IMG/' + batch_sample[2].split('\\')[-1]
-                # right_image = cv2.imread(name)
-                # right_angle = center_angle - DELTA
-                # images.append(right_image)
-                # angles.append(right_angle)
-
             # trim image to only see section with road
             X_train = np.array(images)
             y_train = np.array(angles)
@@ -106,11 +55,9 @@ from keras.layers import Flatten, Dense, Convolution2D, MaxPooling2D, Activation
 from keras.layers import Cropping2D, Lambda, Dropout, BatchNormalization, AveragePooling2D
 from keras.optimizers import Adam
 
-# TODO: Use additional image adata from left/right cameras
-# TODO: Transfer learning?
-
 
 def nvidia_net():
+    DROPOUT_PROB = 0.15
     model = Sequential()
     model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160, 320, 3)))
     model.add(Cropping2D(cropping=((70, 25), (0, 0))))
@@ -120,9 +67,12 @@ def nvidia_net():
     model.add(Convolution2D(64, 3, 3, subsample=(1, 1), border_mode='valid', activation='relu'))
     model.add(Convolution2D(64, 3, 3, subsample=(1, 1), border_mode='valid', activation='relu'))
     model.add(Flatten())
-    model.add(Dense(100, activation='relu'))
-    model.add(Dense(50, activation='relu'))
-    model.add(Dense(10, activation='relu'))
+    model.add(Dense(100, activation='tanh'))
+    model.add(Dropout(DROPOUT_PROB))
+    model.add(Dense(50, activation='tanh'))
+    model.add(Dropout(DROPOUT_PROB))
+    model.add(Dense(10, activation='tanh'))
+    model.add(Dropout(DROPOUT_PROB))
     model.add(Dense(1, activation='tanh'))
 
     return model
@@ -173,12 +123,12 @@ def mynet():
 
 
 optim = Adam(lr=0.001)
-model = mynet()
+model = nvidia_net()
 model.compile(loss='mse', optimizer=optim)
 
 print('Training...')
-train_generator = generator(train_samples, batch_size=64)
-validation_generator = generator(validation_samples, batch_size=64)
+train_generator = generator(train_samples, batch_size=32)
+validation_generator = generator(validation_samples, batch_size=32)
 model.fit_generator(train_generator, nb_epoch=5, samples_per_epoch=2*len(train_samples),
                     validation_data=validation_generator, nb_val_samples=2*len(validation_samples))
 model.save('model.h5')
