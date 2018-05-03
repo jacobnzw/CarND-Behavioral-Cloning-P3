@@ -63,8 +63,6 @@ To augment the data sat, I also flipped images and angles thinking that this wou
 ![alt text][image6]
 ![alt text][image7]
 
-Etc ....
-
 After the collection process, I had X number of data points. I then preprocessed this data by ...
 
 
@@ -88,8 +86,6 @@ I used this training data for training the model. The validation set helped dete
 
 ---
 
-My model is heavily inspired by [this](https://devblogs.nvidia.com/deep-learning-self-driving-cars/) article from NVidia Developer Blog authored by Mariusz Bojarski, Ben Firner, Beat Flepp, Larry Jackel, Urs Muller, Karol Zieba and Davide Del Testa. 
-
 As a pre-processing step, I'm normalizing the data first using the Keras' `Lambda` layer, like so
 ```python
 model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160, 320, 3)))
@@ -100,9 +96,9 @@ model.add(Cropping2D(cropping=((70, 25), (0, 0))))
 ```
 in order to restrict model's attention on the road and ignore the distracting aspects of the image (like the sky and the track surroundings). The layer crops 70 pixels from the top and 25 pixels from the bottom, leaving us with a 65x320x3 image.
 
-The model is a convolution neural network in which the first three convolutional layers use 5x5 filters with 24, 36 and 48 filters respectively. (`model.py` lines 64-66) Each of the three layers is using step size of 2. The following two convolutional layers use 64 of 3x3 filters with step size 1. All convolutional layers use the `'valid'` border mode and RELU as an activation function.
+I ended up using a model, which is heavily inspired by [this](https://devblogs.nvidia.com/deep-learning-self-driving-cars/) article from NVidia Developer Blog authored by Mariusz Bojarski, Ben Firner, Beat Flepp, Larry Jackel, Urs Muller, Karol Zieba and Davide Del Testa. The model is a convolutional neural network in which the first three convolutional layers use 5x5 filters with 24, 36 and 48 filters respectively. Each of the three layers is using step size of 2. The following two convolutional layers use 64 of 3x3 filters with step size 1. All convolutional layers use the `'valid'` border mode and RELU as an activation function.
 
-The outputs of the feature extraction part of the network are flattened and fed into the classifier, which consists of three fully-connected layers with progressively decreasing number of neurons (100, 50, 10 and 1). Looking through the dataset I saw that the steering angle is represented as a number ranging from -1 to 1. For this reason, I decided to use the hyperbolic tanget activation function (instead of RELU) for all fully-connected layers.
+The outputs of the feature extraction part of the network are flattened and fed into the classification part, which consists of three fully-connected layers with progressively decreasing number of neurons (100, 50, 10 and 1). Looking through the dataset I saw that the steering angle is represented as a number ranging from -1 to 1. For this reason, I decided to use the hyperbolic tanget activation function (instead of RELU) for all fully-connected layers.
 
 During my experiments with training different models, I observed that for large enough number of epochs the training error drops below the validation error, which indicates that the model is overfitting the training set. To prevent this, I interleaved the final fully-connected layers with the dropout layers. The dropout probability was set to `DROPOUT_PROB = 0.15`.
 
@@ -147,12 +143,3 @@ model.fit_generator(train_generator, nb_epoch=5, samples_per_epoch=2*len(train_s
 
 The model was trained and validated on different data sets to ensure that the model was not overfitting. One fifth (20%) of the available data was reserved for validation. The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
 
-
-
-#### 2. Final Model Architecture
-
-The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes ...
-
-Here is a visualization of the architecture (note: visualizing the architecture is optional according to the project rubric)
-
-![alt text][image1]
