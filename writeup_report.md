@@ -13,21 +13,17 @@
 
 [//]: # (Image References)
 
-[image1]: ./examples/placeholder.png "Model Visualization"
-[image2]: ./examples/placeholder.png "Grayscaling"
-[image3]: ./examples/placeholder_small.png "Recovery Image"
-[image4]: ./examples/placeholder_small.png "Recovery Image"
-[image5]: ./examples/placeholder_small.png "Recovery Image"
-[image6]: ./examples/placeholder_small.png "Normal Image"
-[image7]: ./examples/placeholder_small.png "Flipped Image"
+[center_driving_track2]: ./examples/center_driving_track2.jpg "Track 2 center driving."
 
 ---
 ### Project Files
-
 My project includes the following files:
 * `model.py` containing code for loading the training data and code for buidling and training the model
 * `drive.py` for driving the car in autonomous mode
-* `model.h5` containing a trained convolution neural network 
+* `model_nvidia_5ep_tr1.h5` model driving on the Track 1
+* `model_nvidia_6ep_tr2.h5` model driving on the Track 2
+* `run_nvidianet.mp4` video recording the driving behavior of the model on Track 1
+* `run_tr2.mp4` video recording the driving behavior of the model on Track 2
 * `writeup_report.md` project writeup summarizing the results and methods used
 
 Using the Udacity provided simulator and my drive.py file, the car can be driven autonomously around the track by executing 
@@ -38,54 +34,16 @@ The `model.py` file contains specification of the convolutional neural network a
 
 
 ### Collecting Data
+As a data set I used the provided Udacity data from track 1. 
 
-** *TODO: how data was collected? Maybe provided dataset is enough? Feels better with my own dataset ;)* **
+In later stages of the project, I decided to give the track 2 a try. Upon realizing that track 2 is contrived and unrealistic, I proceeded to collect 4 laps of center driving using a mouse as a controller as it provided smoother angle transitions. 
 
-Training data was chosen to keep the vehicle driving on the road. I used a combination of center lane driving, recovering from the left and right sides of the road ... 
+![Typical image of center driving on Track 2.][center_driving_track2]
 
-For details about how I created the training data, see the next section. 
-
-
-To capture good driving behavior, I first recorded two laps on track one using center lane driving. Here is an example image of center lane driving:
-
-![alt text][image2]
-
-I then recorded the vehicle recovering from the left side and right sides of the road back to center so that the vehicle would learn to .... These images show what a recovery looks like starting from ... :
-
-![alt text][image3]
-![alt text][image4]
-![alt text][image5]
-
-Then I repeated this process on track two in order to get more data points.
-
-To augment the data sat, I also flipped images and angles thinking that this would ... For example, here is an image that has then been flipped:
-
-![alt text][image6]
-![alt text][image7]
-
-After the collection process, I had X number of data points. I then preprocessed this data by ...
-
-
-I finally randomly shuffled the data set and put Y% of the data into a validation set. 
-
-I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was Z as evidenced by ... I used an adam optimizer so that manually training the learning rate wasn't necessary.
-
+Naturally, I did not manage to keep the car on the center line for the entirety of the track so minor deviations are also present in the data set. The whole data set including the images from the left and right cameras has about 25k+ samples.
 
 
 ### Model Architecture
----
-*The overall strategy for deriving a model architecture was to ...*
-
-*My first step was to use a convolution neural network model similar to the ... I thought this model might be appropriate because ...*
-
-*In order to gauge how well the model was working, I split my image and steering angle data into a training and validation set. I found that my first model had a low mean squared error on the training set but a high mean squared error on the validation set. This implied that the model was overfitting. *
-
-*The final step was to run the simulator to see how well the car was driving around track one. There were a few spots where the vehicle fell off the track... to improve the driving behavior in these cases, I ....*
-
-*At the end of the process, the vehicle is able to drive autonomously around the track without leaving the road.*
-
----
-
 As a pre-processing step, I'm normalizing the data first using the Keras' `Lambda` layer, like so
 ```python
 model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160, 320, 3)))
@@ -128,12 +86,11 @@ def nvidia_net():
 
 
 ### Training Strategy
-
 I used the ADAM (adaptive moment estimation) optimizer for training, which was instantiated explicitly using
 ```python
 optim = Adam(lr=0.001)
 ```
-to allow me to control the learning rate and other parameters more closely. As evident from the code snippet above and after some experimentation, I eventually settled on the learning rate of 0.001. In order to cope with the large data set, I created generators for the training and validation sets respectively and trained using the `fit_generator()` function. I trained for 5 epochs with the batch size of 32.
+to allow me to control the learning rate and other parameters more closely. I used the mean squared error (MSE) as a loss function. As evident from the code snippet above and after some experimentation, I eventually settled on the learning rate of 0.001. In order to cope with the large data set, I created generators for the training and validation sets respectively and trained using the `fit_generator()` function. I trained for 5 epochs with the batch size of 32.
 ```python
 train_generator = generator(train_samples, batch_size=32)
 validation_generator = generator(validation_samples, batch_size=32)
@@ -143,3 +100,14 @@ model.fit_generator(train_generator, nb_epoch=5, samples_per_epoch=2*len(train_s
 
 The model was trained and validated on different data sets to ensure that the model was not overfitting. One fifth (20%) of the available data was reserved for validation. The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
 
+
+### Track 2 Driving
+I was curious to see whether the NVidia model is capable of learning the contrivances of the second track. I used my own data set as described in the above section "Collecting Data". I used the same training strategy and the same batch size. 
+
+At first, I though I might reduce the amount by which the vertical dimension of the image is cropped. The retionale behind this stems from the idea that as the car goes downhill the field of view of the camera is largely occupied by the road. I realized however, that this works against me when the car goes uphill, in which case the image is more likely to contain distracting elements. Thus I decided to leavy the settings for cropping unchanged.
+
+I soon noticed that the model quickly overfits the training data, which was evident from the fact that the training error was lower than the validation error. This meant I had to decrease the model complexity by incresing the dropout probability to 0.25. After trainig for 6 epochs the model is able to drive autonomously on the Track 2. 
+
+
+### Future Work
+In the future, it would be interesting to find out whether the NVidia model can drive both tracks.
