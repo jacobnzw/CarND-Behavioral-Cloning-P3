@@ -16,6 +16,7 @@ with open(os.path.join(DRIVE_LOG_PATH)) as csvfile:
         samples.append(line)
 
 train_samples, validation_samples = train_test_split(samples, test_size=0.2)
+print('len(train_samples)={:d}, len(validation_samples)={:d}'.format(len(train_samples), len(validation_samples)))
 
 
 def generator(samples, batch_size=32):
@@ -29,7 +30,7 @@ def generator(samples, batch_size=32):
             angles = []
             # for all CSV lines in the batch
             for batch_sample in batch_samples:
-            	# choose right directory separator
+                # choose right directory separator
                 SEP = '/' if '/' in batch_sample[0] else '\\'
 
                 # read the center image in RGB format
@@ -81,7 +82,7 @@ def nvidia_net():
 def mynet():
     conv_opt = {'border_mode': 'same'}
     pool_opt = {'border_mode': 'same', 'pool_size': (2, 2)}
-    DROPOUT_PROB = 0.1
+    DROPOUT_PROB = 0.15
     model = Sequential()
     model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160, 320, 3)))
     model.add(Cropping2D(cropping=((70, 25), (0, 0))))  # image size after cropping: (65, 320, 3)
@@ -111,11 +112,11 @@ def mynet():
     model.add(Activation('relu'))
 
     model.add(Flatten())
-    model.add(Dense(200, activation='relu'))
+    model.add(Dense(200, activation='tanh'))
     model.add(Dropout(DROPOUT_PROB))
-    model.add(Dense(100, activation='relu'))
+    model.add(Dense(100, activation='tanh'))
     model.add(Dropout(DROPOUT_PROB))
-    model.add(Dense(10, activation='relu'))
+    model.add(Dense(10, activation='tanh'))
     model.add(Dropout(DROPOUT_PROB))
     model.add(Dense(1, activation='tanh'))
 
@@ -124,6 +125,7 @@ def mynet():
 
 optim = Adam(lr=0.001)
 model = nvidia_net()
+# model = mynet()
 model.compile(loss='mse', optimizer=optim)
 
 print('Training...')
