@@ -48,7 +48,7 @@ from keras.optimizers import Adam
 
 
 def nvidia_net():
-    DROPOUT_PROB = 0.15
+    DROPOUT_PROB = 0.25
     model = Sequential()
     model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160, 320, 3)))
     model.add(Cropping2D(cropping=((70, 25), (0, 0))))
@@ -136,12 +136,12 @@ if __name__ == '__main__':
     print('# training examples: {:d}'.format(len(train_samples)))
     print('# validation examples: {:d}'.format(len(validation_samples)))
 
-    # histogram of steering angles
-    import matplotlib.pylab as plt
-    angles = np.array([float(line[3]) for line in samples])
-    plt.title('Distribution of Steering Angles')
-    plt.hist(angles, density=True, bins=100, log=False)
-    plt.show()
+    # # histogram of steering angles
+    # import matplotlib.pylab as plt
+    # angles = np.array([float(line[3]) for line in samples])
+    # plt.title('Distribution of Steering Angles')
+    # plt.hist(angles, density=True, bins=100, log=False)
+    # plt.show()
 
     # specify optimizer, compile the model
     optim = Adam(lr=args.learning_rate)
